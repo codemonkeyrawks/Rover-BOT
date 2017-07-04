@@ -1,0 +1,224 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'*********************************************************************************************************
+'* Program:  Control.BS2             Author:   Brian & Charlie                                           *
+'* Date:     3/16/2010               Revision: 4.0                                                       *
+'*********************************************************************************************************
+
+' --------[ Program Description ]-------------------------------------------------------------------------
+
+' --------[ I/O Definitions ]-----------------------------------------------------------------------------
+
+Joystick_UD0   PIN 0  'Joystick, Up/Down, Left
+Joystick_LR0   PIN 1  'Joystick, Left/Right, Left
+Joystick_UD1   PIN 2  'Joystick, Up/Down, Right
+Joystick_LR1   PIN 3  'Joystick, Left/Right, Right
+TxEnable       PIN 4  'Transmitter(27982)TR pin
+Tx             PIN 5  'Transmitter(27982)DATA pin
+WiFi           PIN 6
+LCD            PIN 15  '16x2 Serial LCD Pin.
+
+
+' --------[ Variables ]-----------------------------------------------------------------------------------
+
+Left_X    VAR  Byte   'Stores RC Value, Left X Joystick
+Left_Y    VAR  Byte   'Stores RC Value, Left Y Joystick
+Right_X   VAR  Byte   'Stores RC Value, Right X Joystick
+Right_Y   VAR  Byte   'Stores RC Value, Right Y Joystick
+Pos       VAR  Byte   'Position of Joystick
+TxValue   VAR  Word   'Stores Count, Transmitting Data
+RxValue   VAR  Word   'Stores Count, Receiving Data
+inches    VAR  Word   'Converting to Inches
+timein    VAR  Word
+
+
+' --------[ Constants ]-----------------------------------------------------------------------------------
+
+#SELECT $STAMP
+  #CASE BS2, BS2E, BS2PE
+    T2400       CON     396
+    T9600       CON     84
+    T19K2       CON     32
+  #CASE BS2SX, BS2P
+    T2400       CON     1021
+    T9600       CON     240
+    T19K2       CON     110
+#ENDSELECT
+LcdBaud         CON     T19K2
+LcdBkSpc        CON     $08              ' move cursor left
+LcdRt           CON     $09              ' move cursor right
+LcdLF           CON     $0A              ' move cursor down 1 line
+LcdCls          CON     $0C              ' clear LCD (use PAUSE 5 after)
+LcdCR           CON     $0D              ' move pos 0 of next line
+LcdBLon         CON     $11              ' backlight on
+LcdBLoff        CON     $12              ' backlight off
+LcdOff          CON     $15              ' LCD off
+LcdOn1          CON     $16              ' LCD on; cursor off, blink off
+LcdOn2          CON     $17              ' LCD on; cursor off, blink on
+LcdOn3          CON     $18              ' LCD on; cursor on, blink off
+LcdOn4          CON     $19              ' LCD on; cursor on, blink on
+LcdLine1        CON     $80              ' move to line 1, column 0
+LcdLine2        CON     $94              ' move to line 2, column 0
+LcdCC0          CON     $F8              ' define custom char 0
+LcdCC1          CON     $F9              ' define custom char 1
+LcdCC2          CON     $FA              ' define custom char 2
+LcdCC3          CON     $FB              ' define custom char 3
+LcdCC4          CON     $FC              ' define custom char 4
+LcdCC5          CON     $FD              ' define custom char 5
+LcdCC6          CON     $FE              ' define custom char 6
+LcdCC7          CON     $FF              ' define custom char 7
+RC_Time         CON     1                ' 100mS Delay, RC Timeconstant
+' --------[ Initialization ]------------------------------------------------------------------------------
+DEBUG CLS, "Powering On, Please Wait..." ' Power's on Controller
+PAUSE 2000                               ' Wait, Before Sending Data
+DEBUG CLS
+
+' --------[Wireless RX ]----------------------------------------------------------------------------------
+LOW WiFi
+LOW TxEnable                               ' Enable Receiver
+SERIN Tx, 24660, [WAIT("UUUU!")]           ' Receives Data
+RxValue = RxValue + 1                      ' Increments Rx Value
+PAUSE 10
+'--------[Initialize Wireless TX ]------------------------------------------------------------------------
+HIGH WiFi
+HIGH TxEnable                        'Enable Transmitter
+PULSOUT Tx,1200                      'Send Sync Pulse to Radio
+SEROUT Tx, 24660, ["UUUU!"]          'Sends Data
+TxValue = TxValue + 1                'Increment Tx Value
+PAUSE 10
+' --------[Set Values ]-----------------------------------------------------------------------------------
+RxValue = 0                              ' Counter for Wireless RX
+TxValue = 0                              ' Counter for Wireless TX
+Left_X = 0                               ' Set Left X = 0
+Left_Y = 0                               ' Set Left Y = 0
+Right_X = 0                              ' Set Right X = 0
+Right_Y = 0                              ' Set Right Y = 0
+
+' --------[RC Conversion]---------------------------------------------------------------------------------
+DO
+
+' --------[Wireless RX ]----------------------------------------------------------------------------------
+LOW WiFi
+LOW TxEnable                               ' Enable Receiver
+SERIN Tx, 24660, [WAIT("UUUU!", timein)]   ' Receives Data
+RxValue = RxValue + 1                      ' Increments Rx Value
+PAUSE 10
+'--------[Initialize Wireless TX ]------------------------------------------------------------------------
+HIGH WiFi
+HIGH TxEnable                        'Enable Transmitter
+PULSOUT Tx,1200                      'Send Sync Pulse to Radio
+SEROUT Tx, 24660, ["UUUU!", Pos]     'Sends Data
+TxValue = TxValue + 1                'Increment Tx Value
+PAUSE 10
+
+   IF  Left_X < 30 OR Left_X > 20 OR  Left_Y < 40 OR Left_Y > 25 THEN GOSUB Neutral
+   IF Left_Y < 10 THEN GOSUB Forward
+   IF Left_Y > 50 THEN GOSUB Backward
+   IF Left_X < 15 THEN GOSUB Left
+   IF Left_X > 40 THEN GOSUB Right
+
+' --------[Display]---------------------------------------------------------------------------------------
+DEBUG  HOME, "Left-X  = ", DEC Left_X,CLREOL,CR, "Left-Y  = ", DEC Left_Y,CLREOL ,CR,
+             "Right-X = ", DEC Right_X,CLREOL,CR, "Right-Y = ", DEC Right_Y,CLREOL,CR,
+             "TX:", DEC TxValue, "  ","RX:", DEC RxValue,"  ","POS:", DEC Pos,"  ",
+             "Inches:",DEC3 timein
+
+   LOOP
+' --------[Neutral]---------------------------------------------------------------------------------------
+PING:
+  LOW WiFi
+  LOW TxEnable                               ' Enable Receiver
+  SERIN Tx, 24660, [WAIT("UUUU!"),timein]                  ' Receives Data
+  RxValue = RxValue + 1
+  DEBUG CR,TIMEIN
+  RETURN
+
+Neutral:
+   SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]     ' Initializes LCD
+   SEROUT lcd, LcdBaud, ["Neutral"]                    ' Sends text to LCD
+   Pos = 0                                             ' Position Value
+   HIGH TxEnable                                       ' Wireless TX=1
+   PULSOUT Tx, 1200                                    ' Syncs a Pulse, Receiver
+   SEROUT Tx, 24660, ["UUUU!",Pos]                             ' Sends Data
+   IF Pos = 0 THEN TxValue= TxValue + 1                ' Increments Data Value
+   HIGH WiFi
+   PAUSE 5                                             ' Clock Sync
+RETURN
+' --------[RC Motor Control subroutines]------------------------------------------------------------------------------
+RC:
+HIGH Joystick_UD0                        ' Set PIN High
+RCTIME Joystick_UD0, 1, Left_X           ' Set RC Timeconstant into Left-X
+PAUSE 2
+HIGH Joystick_LR0                        ' Set PIN High
+RCTIME Joystick_LR0, 1, Left_Y           ' Set RC Timeconstant into Left-Y
+PAUSE 2
+HIGH Joystick_UD1                        ' Set PIN High
+RCTIME Joystick_UD1, 1, Right_X          ' Set RC Timeconstant into Right-X
+PAUSE 2
+HIGH Joystick_LR1                        ' Set PIN High
+RCTIME Joystick_LR1, 1, Right_Y          ' Set RC Timeconstant into Right-Y
+PAUSE 2
+
+RETURN
+
+Forward:
+
+  DO WHILE Left_Y < 10                              ' Position Value
+  Pos = 1
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]   ' Initializes LCD
+  SEROUT lcd, LcdBaud, ["Forward"]                  ' Sends text to LCD
+  HIGH TxEnable                                     ' Wireless TX=1
+  PULSOUT Tx, 1200                                  ' Syncs a Pulse, Receiver
+  SEROUT Tx, 24660, ["UUUU!",Pos]                           ' Sends Data
+  HIGH WiFi
+  TxValue= TxValue + 1                              ' Increment Tx Value
+  PAUSE 5                                           ' Clock Sync
+  GOSUB RC
+  LOOP
+
+  RETURN
+
+Backward:
+  DO WHILE Left_Y > 50
+  Pos = 2                                           ' Position Value
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]   ' Initializes LCD
+  SEROUT lcd, LcdBaud, ["Backward"]                 ' Sends text to LCD
+  HIGH TxEnable                                     ' Wireless TX=1
+  PULSOUT Tx, 1200                                  ' Syncs a Pulse, Receiver
+  SEROUT Tx, 24660, ["UUUU!", Pos]                           ' Sends Data
+  HIGH WiFi
+  TxValue= TxValue + 1                              ' Increment Tx Value
+  PAUSE 5                                           ' Clock Sync
+  GOSUB RC
+  LOOP
+  RETURN
+
+Left:
+  DO WHILE Left_X < 15
+  Pos = 3                                           ' Position Value
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]   ' Initializes LCD
+  SEROUT lcd, LcdBaud, ["Left"]                     ' Sends text to LCD
+  HIGH TxEnable                                     ' Wireless TX=1
+  PULSOUT Tx, 1200                                  ' Syncs a Pulse, Receiver
+  SEROUT Tx, 24660, ["UUUU!", Pos]                           ' Sends Data
+  HIGH WiFi
+  TxValue= TxValue + 1                              ' Increment Tx Value
+  PAUSE 5                                           ' Clock Sync
+  GOSUB RC
+  LOOP
+  RETURN
+
+Right:
+  DO WHILE Left_X > 40
+  Pos = 4                                           ' Position Value
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]   ' Initializes LCD
+  SEROUT lcd, LcdBaud, ["Right"]                    ' Sends text to LCD
+  HIGH TxEnable                                     ' Wireless TX=1
+  PULSOUT Tx, 1200                                  ' Syncs a Pulse, Receiver
+  SEROUT Tx, 24660, ["UUUU!", Pos]                           ' Sends Data
+  HIGH WiFi
+  TxValue= TxValue + 1                              ' Increment Tx Value
+  PAUSE 5                                           ' Clock Sync
+  GOSUB RC
+  LOOP
+  RETURN

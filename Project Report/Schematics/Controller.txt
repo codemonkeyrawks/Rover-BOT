@@ -1,0 +1,39 @@
+Part     Value            Device           Package          Library     Sheet
+
+C1       0.1uF            C-US025-060X050  C025-060X050     rcl         1
+C2       0.1uF            C-US025-060X050  C025-060X050     rcl         1
+C3       0.1uF            C-US025-060X050  C025-060X050     rcl         1
+C4       0.1uF            C-US025-060X050  C025-060X050     rcl         1
+CON0     P0               V-->             I/O              supply2     1
+CON1     P1               V-->             I/O              supply2     1
+CON2     P2               V-->             I/O              supply2     1
+CON3     P3               V-->             I/O              supply2     1
+CON4     P4               V-->             I/O              supply2     1
+CON5     P5               V-->             I/O              supply2     1
+CON6     P6               V-->             I/O              supply2     1
+CON7     P7               V-->             I/O              supply2     1
+CON8     P8               V-->             I/O              supply2     1
+CON9     P9               V-->             I/O              supply2     1
+CON10    P0               V<--             I/O              supply2     1
+CON11    P1               V<--             I/O              supply2     1
+CON12    P2               V<--             I/O              supply2     1
+CON13    P3               V<--             I/O              supply2     1
+CON14    P4               V<--             I/O              supply2     1
+CON15    P5               V-->             I/O              supply2     1
+CON16    P6               V-->             I/O              supply2     1
+CON17    P7               V-->             I/O              supply2     1
+CON18    P8               V-->             I/O              supply2     1
+CON19    P9               V-->             I/O              supply2     1
+JP1      BS2              M12PTH           1X12             SparkFun    1
+JP2      WiFi             M05PTH           1X05             SparkFun    1
+R1       220              R-US_0207/2V     0207/2V          rcl         1
+R2       220              R-US_0207/2V     0207/2V          rcl         1
+R3       220              R-US_0207/2V     0207/2V          rcl         1
+R4       220              R-US_0207/2V     0207/2V          rcl         1
+R5       220              R-US_0207/2V     0207/2V          rcl         1
+R6       1K               R-US_0207/2V     0207/2V          rcl         1
+S1                        TAC_SWITCHPTH    TACTILE-PTH      SparkFun    1
+U1       JOYSTICK-PSP1000 JOYSTICK-PSP1000 JOYSTICK-PSP1000 SparkFun    1
+U2       JOYSTICK-PSP1000 JOYSTICK-PSP1000 JOYSTICK-PSP1000 SparkFun    1
+U3       16x2 LCD         16X2_SER         TUXGR_16X2_R2    display-lcd 1
+WIFI                      LED5MM           LED5MM           led         1

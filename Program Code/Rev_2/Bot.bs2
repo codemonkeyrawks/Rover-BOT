@@ -1,0 +1,193 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'*********************************************************************************************************
+'* Program:  Bot.BS2                 Author:   Brian & Charlie                                           *
+'* Date:     3/10/2010               Revision: 2.0                                                       *
+'*********************************************************************************************************
+
+' --------[ Program Description ]-------------------------------------------------------------------------
+
+' --------[ I/O Definitions ]-----------------------------------------------------------------------------
+
+LfIrIn         PIN  1         ' Left IR Sensor, Input
+RtIrIn         PIN  3         ' Right IR Sensor, Input
+LfIrOut        PIN  0         ' Left IR LED, Output
+RtIrOut        PIN  2         ' Right IR LED, Output
+DataPin        PIN  4         ' Wireless Traffic Data
+TX_RX          PIN  5         ' Wireless, TX=1 RX=0
+Speaker        PIN  11        ' Buzzer, Output
+Servo_AB       PIN  12        ' Left + Right Servos
+Servo_CD       PIN  14        ' Up/Down + Claw Servos
+
+' --------[ Constants ]-----------------------------------------------------------------------------------
+
+Zone            CON     4000  ' Buzzer Frequency
+
+' --------[ Variables ]-----------------------------------------------------------------------------------
+
+irDetectLeft   VAR  Bit       ' Temporary Storage for IR Left
+irDetectRight  VAR  Bit       ' Temporary Storage for IR Right
+distanceLeft   VAR  Nib       ' Right Distance, Value
+distanceRight  VAR  Nib       ' Left Distance, Value
+freqSelect     VAR  Nib       ' Value of Frequency
+irFrequency    VAR  Word      ' Temporary Storage for Frequency
+DispNote       VAR  Word      ' Count for FREQOUT
+TxValue        VAR  Word      ' Stores Count, Transmitting Data
+RxValue        VAR  Word      ' Stores Count, Receiving Data
+rawDist        VAR  Word      ' Raw measurement
+inches         VAR  Word      ' Converting to Inches
+Pos            VAR  Byte      ' Position of Joystick Value
+
+' --------[ Initialization ]------------------------------------------------------------------------------
+' Servo Pal - Left + Right Servo:
+
+INPUT Servo_AB                'Make Sure Servos are Not Moving.
+DO : LOOP UNTIL Servo_AB      'Wait for ServoPAL to Power Up.
+LOW Servo_AB                  'Set Pin, and Hold
+PAUSE 100                     '100mS Reset, ServoPAL.
+HIGH Servo_AB                 'Raise PIN
+
+' Servo Pal - Arm Up/Down + Claw:
+
+'INPUT Servo_CD               'Make Sure Servos are Not Moving.
+'DO : LOOP UNTIL Servo_CD     'Wait for ServoPAL to Power Up.
+'LOW Servo_CD                 'Set Pin, and Hold
+'PAUSE 100                    '100mS Reset, ServoPAL.
+'HIGH Servo_CD                'Raise PIN
+
+PAUSE 100
+
+DEBUG CLS, "Powering On, Please Wait..."
+FREQOUT Speaker, 500, Zone
+PAUSE 2000
+DEBUG CLS
+
+' --------[Set Values ]----------------------------------------------------------------------------------
+
+RxValue = 0                   ' Counter for Wireless RX
+TxValue = 0                   ' Counter for Wireless TX
+Pos = 0                       ' Set Position to Neutral
+Inches = 0                    ' Sets Ping, Value
+
+' --------[Get Distances ]-------------------------------------------------------------------------------
+DO
+
+    distanceLeft = 0
+    distanceRight = 0
+
+    FOR freqSelect = 0 TO 4
+
+    LOOKUP freqSelect,[37500,38250,39500,40500,41500], irFrequency ' Table Lookup
+
+    FREQOUT LfIrOut,1,irFrequency                                  ' IR Left, Transmit
+    irDetectLeft = IN1                                             ' Store Distance
+
+    FREQOUT RtIrOut,1,irFrequency                                  ' IR Right, Transmit
+    irDetectRight = IN3                                            ' Store Distance
+
+    distanceLeft = distanceLeft + irDetectLeft                     ' Sum Values, Left
+    distanceRight = distanceRight + irDetectRight                  ' Sum Values, Right
+
+PAUSE 100
+
+NEXT
+
+' --------[Display Distances ]---------------------------------------------------------------------------
+
+DEBUG HOME, "TX:", DEC TxValue, "  ","RX:", DEC RxValue,"  ","POS:", DEC Pos,"  ","Inches:",DEC inches,
+         CR,"Left-Zone:", DEC1 distanceLeft,"  ", "Right-Zone:", DEC1 distanceRight
+
+' --------[Wireless TX ]---------------------------------------------------------------------------------
+
+HIGH TX_RX                             ' Wireless TX=1
+PULSOUT DataPin, 1200                  ' Syncs a Pulse, Receiver
+SEROUT DataPin, 16468, [ "!",inches]   ' Sends Data
+TxValue= TxValue + 1                   ' Increments Data Value
+LOW TX_RX                              ' Wireless RX=0
+PAUSE 10
+
+' --------[Wireless RX ]---------------------------------------------------------------------------------
+
+LOW TX_RX                              ' Wireless RX=0
+SERIN DataPin, 16468, [WAIT("!"), Pos] ' Receivces Data
+RxValue= RxValue + 1                   ' Increments Data Value
+PAUSE 10
+
+' 1 = Forward, 2 = Backward, 3 = Left, 4 = Right, 0 = Neutral, >5 = Dump Value
+
+IF Pos = 0 THEN GOSUB Neutral
+IF Pos = 1 THEN GOSUB Forward
+IF Pos = 2 THEN GOSUB Sound
+IF Pos = 3 THEN GOSUB Left
+IF Pos = 4 THEN GOSUB Right
+
+'IF Pos > 5 THEN GOSUB Neutral
+
+LOOP
+
+' --------[Motor Control ]-------------------------------------------------------------------------------
+
+Neutral:
+  PULSOUT Servo_AB, 2000 'Turn right servo off.
+  PULSOUT Servo_AB, 2000 'Turn left servo off.
+    PAUSE 100
+ RETURN
+
+Sound:
+  IF distanceLeft > 2 OR distanceRight > 2 THEN GOSUB Backward ' Enables Backup Control
+  IF distanceLeft = 1 OR distanceRight = 1 THEN GOSUB Buzz_A   ' Disables Backup Control, Alarm
+RETURN
+
+Backward:
+
+  PULSOUT Servo_AB, 500  'Program right servo for full reverse.
+  PULSOUT Servo_AB, 1000 'Program left servo for full reverse.
+
+PAUSE 100
+RETURN
+
+Forward:
+
+  PULSOUT Servo_AB, 1000 'Program right servo for full forward.
+  PULSOUT Servo_AB, 500  'Program left servo for full forward.
+
+PAUSE 100
+RETURN
+
+Left:
+
+  PULSOUT Servo_AB, 1000 'Program right servo for full forward.
+  PULSOUT Servo_AB, 1000 'Program left servo for full reverse.
+
+PAUSE 100
+RETURN
+
+
+Right:
+
+  PULSOUT Servo_AB, 500  'Program right servo for full reverse.
+  PULSOUT Servo_AB, 500  'Program left servo fro full forward.
+
+PAUSE 100
+RETURN
+
+'---------[Robotic-Arm]---------------------------------------------------------------------
+'OPEN:
+'PULSOUT claw, 1000      ' Moves Servo to 10 o'clock position
+'PAUSE 50
+'RETURN
+
+
+'CLOSE:
+'PULSOUT claw, 600       ' Moves Servo to 2 o'clock position
+'PAUSE 50
+'RETURN
+
+' --------[Alarm Check]---------------------------------------------------------------------
+
+Buzz_A:
+  FREQOUT Speaker, 500, Zone
+  PULSOUT Servo_AB, 2000 'Turn right servo off.
+  PULSOUT Servo_AB, 2000 'Turn left servo off.
+
+RETURN

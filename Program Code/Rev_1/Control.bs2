@@ -1,0 +1,154 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'*********************************************************************************************************
+'* Program:  Control.BS2             Author:   Brian & Charlie                                           *
+'* Date:     3/10/2010               Revision: 1.0                                                       *
+'*********************************************************************************************************
+
+' --------[ Program Description ]-------------------------------------------------------------------------
+
+' --------[ I/O Definitions ]-----------------------------------------------------------------------------
+
+Joystick_UD0   PIN 1  ' Joystick, Up/Down, Left
+Joystick_LR0   PIN 2  ' Joystick, Left/Right, Left
+Joystick_UD1   PIN 3  ' Joystick, Up/Down, Right
+Joystick_LR1   PIN 4  ' Joystick, Left/Right, Right
+DataPin        PIN 5  ' Wireless Data
+TX_RX          PIN 6  ' Wireless, TX=1 RX=0
+
+' --------[ Variables ]-----------------------------------------------------------------------------------
+
+Left_X    VAR  Byte    ' Stores RC Value, Left X Joystick
+Left_Y    VAR  Byte    ' Stores RC Value, Left Y Joystick
+Right_X   VAR  Byte    ' Stores RC Value, Right X Joystick
+Right_Y   VAR  Byte    ' Stores RC Value, Right Y Joystick
+TxValue   VAR  Word    ' Stores Count, Transmitting Data
+RxValue   VAR  Word    ' Stores Count, Receiving Data
+inches    VAR  Word    ' Converting to Inches
+Pos       VAR  Byte
+
+
+' --------[ Initialization ]------------------------------------------------------------------------------
+
+DEBUG CLS, "Powering On, Please Wait..." ' Power's on Controller
+PAUSE 2000                               ' Wait, Before Sending Data
+DEBUG CLS
+
+' --------[Set Values ]-----------------------------------------------------------------------------------
+
+RxValue = 0                              ' Counter for Wireless RX
+TxValue = 0                              ' Counter for Wireless TX
+Left_X = 0                               ' Set Left X = 0
+Left_Y = 0                               ' Set Left Y = 0
+Right_X = 0                              ' Set Right X = 0
+Right_Y = 0                              ' Set Right Y = 0
+Inches = 0                               ' Sets Ping, Value
+
+' --------[ Joystick ]------------------------------------------------------------------------------------
+
+DO
+
+HIGH Joystick_UD0                        ' Set PIN High
+RCTIME Joystick_UD0, 1, Left_X           ' Set RC Timeconstant into Left-X
+PAUSE 2
+HIGH Joystick_LR0                        ' Set PIN High
+RCTIME Joystick_LR0, 1, Left_Y           ' Set RC Timeconstant into Left-Y
+PAUSE 2
+HIGH Joystick_UD1                        ' Set PIN High
+RCTIME Joystick_UD1, 1, Right_X          ' Set RC Timeconstant into Right-X
+PAUSE 2
+HIGH Joystick_LR1                        ' Set PIN High
+RCTIME Joystick_LR1, 1, Right_Y          ' Set RC Timeconstant into Right-Y
+PAUSE 2
+
+' --------[RC Conversion]---------------------------------------------------------------------------------
+
+' X is 0-50, X=0-20 , X=25-34, X=40-60
+' Y is 5-60, Y=5-20 , Y=22-34, Y=40-60
+
+IF Left_Y < 20 THEN GOSUB Forward
+IF Left_Y > 40 THEN GOSUB Backward
+
+IF Left_X < 20 THEN GOSUB Left
+IF Left_X > 40 THEN GOSUB Right
+
+IF Left_Y > 22 AND Left_Y < 34 OR Left_X > 25 AND Left_X < 34  THEN GOSUB Neutral
+
+IF Left_X OR Left_Y > 60 THEN GOSUB Neutral
+
+' --------[Display]---------------------------------------------------------------------------------------
+
+DEBUG  HOME, "Left-X  = ", DEC Left_X,CLREOL,CR, "Left-Y  = ", DEC Left_Y,CLREOL ,CR,
+             "Right-X = ", DEC Right_X,CLREOL,CR, "Right-Y = ", DEC Right_Y,CLREOL,CR,
+             "TX:", DEC TxValue, "  ","RX:", DEC RxValue,"  ","POS:", DEC Pos,"  ","Inches:",DEC inches
+
+' --------[Wireless RX ]---------------------------------------------------------------------------------
+
+LOW TX_RX                                   ' Wireless RX=0
+SERIN DataPin, 16468, [WAIT("!"), inches]   ' Receivces Data
+RxValue= RxValue + 1                        ' Increments Data Value
+PAUSE 10                                    ' Wireless TX=1
+HIGH TX_RX
+
+LOOP
+
+Neutral:
+
+IF Left_Y > 22 AND Left_Y < 34 OR Left_X > 25 AND Left_X < 34  THEN
+Pos = 0
+HIGH TX_RX                                  ' Wireless TX=1
+PULSOUT DataPin, 1200                       ' Syncs a Pulse, Receiver
+SEROUT DataPin, 16468, [ "!",Pos]           ' Sends Data
+TxValue= TxValue + 1                        ' Increments Data Value
+PAUSE 10
+ENDIF
+RETURN
+
+
+Forward:
+
+IF Left_Y < 20 THEN
+Pos = 1
+HIGH TX_RX                                  ' Wireless TX=1
+PULSOUT DataPin, 1200                       ' Syncs a Pulse, Receiver
+SEROUT DataPin, 16468, [ "!",Pos]           ' Sends Data
+TxValue= TxValue + 1                        ' Increments Data Value
+PAUSE 10
+ENDIF
+RETURN
+
+Backward:
+
+IF Left_Y > 40 THEN
+Pos = 2
+HIGH TX_RX                                  ' Wireless TX=1
+PULSOUT DataPin, 1200                       ' Syncs a Pulse, Receiver
+SEROUT DataPin, 16468, [ "!",Pos]           ' Sends Data
+TxValue= TxValue + 1                        ' Increments Data Value
+PAUSE 10
+ENDIF
+RETURN
+
+Left:
+
+IF Left_X < 20 THEN
+Pos = 3
+HIGH TX_RX                                  ' Wireless TX=1
+PULSOUT DataPin, 1200                       ' Syncs a Pulse, Receiver
+SEROUT DataPin, 16468, [ "!",Pos]           ' Sends Data
+TxValue= TxValue + 1                        ' Increments Data Value
+PAUSE 10
+ENDIF
+RETURN
+
+Right:
+
+IF Left_X > 40 THEN
+Pos = 4
+HIGH TX_RX                                  ' Wireless TX=1
+PULSOUT DataPin, 1200                       ' Syncs a Pulse, Receiver
+SEROUT DataPin, 16468, [ "!",Pos]           ' Sends Data
+TxValue= TxValue + 1                        ' Increments Data Value
+PAUSE 10
+ENDIF
+RETURN

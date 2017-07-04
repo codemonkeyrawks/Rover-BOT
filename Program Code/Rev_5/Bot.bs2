@@ -1,0 +1,207 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'*********************************************************************************************************
+'* Program:  Bot.BS2                 Author:   Brian & Charlie                                           *
+'* Date:     3/18/2010               Revision: 5.0                                                       *
+'*********************************************************************************************************
+
+' --------[ Program Description ]-------------------------------------------------------------------------
+
+' --------[ I/O Definitions ]-----------------------------------------------------------------------------
+LfIrOut     PIN 0                   'Left IR LED, Output
+LfIrIn      PIN 1                   'Left IR Sensor, Input
+RtIrOut     PIN 2                   'Right IR LED, Output
+RtIrIn      PIN 3                   'Right IR Sensor, Input
+TxEnable    PIN 4                   'Transmitter(27982)TR PIN
+Tx          PIN 5                   'Transmitter(27982)DATA pin
+WiFi        PIN 10
+Speaker     PIN 11                  'Buzzer, Output
+Servo_AB    PIN 12                  'Left + Right Servos
+Servo_CD    PIN 14                  'Up/Down + Claw Servos
+Ping        PIN 15                  'Ping sensor on pin 15
+' --------[ Constants ]--------------------------------------------
+Zone        CON     4000            'Buzzer Frequency
+T2400       CON     396
+T9600       CON     84
+T19K2       CON     32
+Trigger     CON     5               ' trigger pulse = 10 uS
+Scale       CON     $200            ' raw x 2.00 = uS
+LcdBaud     CON     T19K2           'baud rate for LCD
+LcdBkSpc    CON     $08             ' move cursor left
+LcdRt       CON     $09             ' move cursor right
+LcdLF       CON     $0A             ' move cursor down 1 line
+LcdCls      CON     $0C             ' clear LCD (use PAUSE 5 after)
+LcdCR       CON     $0D             ' move pos 0 of next line
+LcdOff      CON     $15             ' LCD off
+LcdLine1    CON     $80             ' move to line 1, column 0
+LcdLine2    CON     $94             ' move to line 2, column 0
+inscale CON 872                      'scale factor for inches at 2000 feet
+cmscale CON 2215                     'scale factor centimeters at 2000 feet
+' --------[ Variables ]--------------------------------------------
+irDetectLeft     VAR  Bit             'Temporary Storage for IR Left
+irDetectRight    VAR  Bit             'Temporary Storage for IR Right
+distanceLeft     VAR  Nib             'Right Distance, Value
+distanceRight    VAR  Nib             'Left Distance, Value
+freqSelect       VAR  Nib             'Value of Frequency
+Pos              VAR  Byte            'Position of Joystick Value
+irFrequency      VAR  Word            'Temporary Storage for Frequency
+DispNote         VAR  Word            'Count for FREQOUT
+TxValue          VAR  Word            'Stores Count, Transmitting Data
+RxValue          VAR  Word            'Stores Count, Receiving Data
+timecm           VAR Word             'variable FOR centimeters
+timein           VAR Word             'varable for inches
+Distance         VAR  Word
+' --------[ Initialization for Servos and Ping ]------------------------------------------------
+DEBUG CLS, "Powering On, Please Wait..."
+FREQOUT Speaker, 500, Zone
+DEBUG CLS
+' Servo Pal - Left + Right Servo:
+INPUT Servo_AB                      'Make Sure Servos are Not Moving.
+DO : LOOP UNTIL Servo_AB            'Wait for ServoPAL to Power Up.
+LOW Servo_AB                        'Set Pin, and Hold
+PAUSE 100                           '100mS Reset, ServoPAL.
+HIGH Servo_AB                       'Raise PIN
+PAUSE 100
+
+' --------[Initialize Wireless TX ]-----------------------------------------
+HIGH WiFi
+HIGH TxEnable                        'Enable Transmitter
+PULSOUT Tx,1200                      'Send Sync Pulse to Radio
+SEROUT Tx, 24660, ["UUUU!"]          'Sends Data
+TxValue = TxValue + 1                'Increment Tx Value
+PAUSE 10
+'--------[Initialize Wireless RX ]-----------------------------------------
+LOW TxEnable                         'Enable Receiver
+SERIN Tx, 24660, [WAIT("UUUU!")]     'Receives Data
+LOW WiFi
+RxValue = RxValue + 1
+PAUSE 10
+' --------[Set Values ]-----------------------------------------------------
+RxValue = 0                           'Counter for Wireless RX
+TxValue = 0                           'Counter for Wireless TX
+'----------Main Program-----------------------------------------------------
+MAIN:
+DO
+
+  GOSUB PingOut
+  GOSUB IR
+  GOSUB Wireless
+  IF Pos = 0 THEN GOSUB Neutral        'robot in neutral
+  IF Pos = 1 THEN GOSUB Forward        'robot drives forward
+  IF Pos = 2 THEN GOSUB Backward       'robot drives backward
+  IF Pos = 3 THEN GOSUB Right          'robot drives left
+  IF Pos = 4 THEN GOSUB Left           'robot drives right
+
+LOOP
+
+' --------[Subroutines ]----------------------------------------------------
+
+IR:
+
+    distanceLeft = 0
+    distanceRight = 0
+
+    FOR freqSelect = 0 TO 4
+
+    LOOKUP freqSelect,[37500,38250,39500,40500,41500], irFrequency ' Table Lookup
+
+    FREQOUT LfIrOut,1,irFrequency                                  ' IR Left, Transmit
+    irDetectLeft = IN1                                             ' Store Distance
+
+    FREQOUT RtIrOut,1,irFrequency                                  ' IR Right, Transmit
+    irDetectRight = IN3                                            ' Store Distance
+
+    distanceLeft = distanceLeft + irDetectLeft                     ' Sum Values, Left
+    distanceRight = distanceRight + irDetectRight                  ' Sum Values, Right
+
+    NEXT
+
+  IF Pos = 0 THEN GOSUB Neutral        'robot in neutral
+  IF Pos = 1 THEN GOSUB Forward        'robot drives forward
+  IF Pos = 2 THEN GOSUB Backward       'robot drives backward
+  IF Pos = 3 THEN GOSUB Right          'robot drives left
+  IF Pos = 4 THEN GOSUB Left           'robot drives right
+
+RETURN
+
+PingOut:
+PULSOUT Ping, 5 'Set pin 15 high for 10 us
+PULSIN Ping, 5, timein 'wait for pin 15 to go low and recored number of 2us units it took
+timecm = timein   'timecm value equal timein value, the count of 2us increments
+timein = timein ** inscale 'scale count
+PAUSE 100
+DEBUG HOME ,TIMEIN
+
+  IF Pos = 0 THEN GOSUB Neutral        'robot in neutral
+  IF Pos = 1 THEN GOSUB Forward        'robot drives forward
+  IF Pos = 2 THEN GOSUB Backward       'robot drives backward
+  IF Pos = 3 THEN GOSUB Right          'robot drives left
+  IF Pos = 4 THEN GOSUB Left           'robot drives right
+
+
+RETURN
+
+Wireless:
+  HIGH WiFi
+  LOW TxEnable                         'Enable Receiver
+  SERIN Tx, 24660, [WAIT("UUUU!"), Pos] 'Receives Data
+  RxValue = RxValue + 1
+  RETURN
+
+Neutral:
+ PULSOUT Servo_AB, 2000                'Turn right servo off.
+ PULSOUT Servo_AB, 2000                'Turn left servo off.
+RETURN
+
+Forward:
+  DO
+ PULSOUT Servo_AB, 1000              'Program right servo for full forward.
+ PULSOUT Servo_AB, 500               'Program left servo for full forward.
+ GOSUB Wireless
+ LOOP WHILE pos = 1
+RETURN
+
+Backward:
+
+  DO
+
+   IF distanceLeft < 1 OR distanceRight < 1 THEN GOSUB Buzz 'Disables Backup Control, Alarm
+    PULSOUT Servo_AB, 500                'Program right servo for full reverse.
+    PULSOUT Servo_AB, 1000               'Program left servo for full reverse.
+    GOSUB wireless
+  LOOP WHILE pos = 2
+RETURN
+
+Right:
+
+  DO
+    PULSOUT Servo_AB, 500                 'Program right servo for full reverse.
+    PULSOUT Servo_AB, 500                 'Program left servo fro full forward.
+    HIGH 7                                'activates right blinker
+    PAUSE 10
+    LOW 7
+    PAUSE 10
+    GOSUB Wireless
+  LOOP  WHILE pos=3
+RETURN
+
+Left:
+
+  DO
+    PULSOUT Servo_AB, 1000                'Program right servo for full forward.
+    PULSOUT Servo_AB, 1000                'Program left servo for full reverse.
+    HIGH 9                                'activates left blinker
+    PAUSE 10
+    LOW 9
+    PAUSE 10
+    GOSUB Wireless
+  LOOP WHILE pos = 4
+RETURN
+
+
+
+Buzz:
+  FREQOUT Speaker, 500, Zone
+  PULSOUT Servo_AB, 2000                  'Turn right servo off.
+  PULSOUT Servo_AB, 2000                  'Turn left servo off.
+  GOTO Main

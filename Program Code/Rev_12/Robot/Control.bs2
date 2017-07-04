@@ -1,0 +1,190 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'*********************************************************************************************************
+'* Program:  Control.BS2             Author:   Brian & Charlie                                           *
+'* Date:     3/26/2010               Revision: 12.0                                                      *
+'*********************************************************************************************************
+
+' --------[ Program Description ]-------------------------------------------------------------------------
+'This program is the control program for Rover-Bot Wireless Control Box.
+' --------[ I/O Definitions ]-----------------------------------------------------------------------------
+Joystick_LR0   PIN 0                             'Joystick, Left/Right, Left
+Joystick_UD0   PIN 1                             'Joystick, Up/Down, Left
+Joystick_LR1   PIN 2                             'Joystick, Left/Right, Right
+Joystick_UD1   PIN 3                             'Joystick, Up/Down, Right
+LCD            PIN 4                             '16x2 Serial LCD Pin.
+Tx             PIN 5                             'Transmitter(27982)DATA pin
+TxEnable       PIN 6                             'Transmitter(27982)TR pin
+PowerDown      PIN 7                                'Wireless Sleep = 0
+WiFi           PIN 8                             'Wireless Data TX=1 RX=0
+PB0            PIN 9                             '0=None, 1=Increment
+' --------[ Variables ]-----------------------------------------------------------------------------------
+PB1            VAR  Bit
+Counter        VAR  Nib                         'Enables Light Control
+distanceLeft   VAR  Nib                         'Right Distance, Value
+distanceRight  VAR  Nib                         'Left Distance, Value
+Left_X         VAR  Byte                        'Stores RC Value, Left X Joystick
+Left_Y         VAR  Byte                        'Stores RC Value, Left Y Joystick
+Right_X        VAR  Byte                        'Stores RC Value, Right X Joystick
+Right_Y        VAR  Byte                        'Stores RC Value, Right Y Joystick
+Pos            VAR  Byte                        'Position of Joystick
+Distance       VAR  Word                        'Ping Measurement
+' --------[ Constants ]-----------------------------------------------------------------------------------
+T2400          CON     396
+T9600          CON     84
+T19K2          CON     32
+LcdBaud        CON     T19K2
+LcdBkSpc       CON     $08                  'move cursor left
+LcdRt          CON     $09                'move cursor right
+LcdLF          CON     $0A                'move cursor down 1 line
+LcdCls         CON     $0C                'clear LCD (use PAUSE 5 after)
+LcdCR          CON     $0D                'move pos 0 of next line
+LcdBLon        CON     $11                'backlight on
+LcdBLoff       CON     $12                'backlight off
+LcdOff         CON     $15                'LCD off
+LcdOn1         CON     $16                'LCD on; cursor off, blink off
+LcdOn2         CON     $17                'LCD on; cursor off, blink on
+LcdOn3         CON     $18                'LCD ON; cursor ON, blink off
+LcdOn4         CON     $19                'LCD on; cursor on, blink on
+LcdLine1       CON     $80                'move to line 1, column 0
+LcdLine2       CON     $94                'move to line 2, column 0
+
+' --------[ Initialization ]------------------------------------------------------------------------------
+HIGH PowerDown                          'Wakeup Wireless
+PAUSE 200                               'Wait, Before Sending Data
+' --------[Set Values ]-----------------------------------------------------------------------------------
+Left_X = 0                              'Set Left X = 0
+Left_Y = 0                              'Set Left Y = 0
+Right_X = 0                             'Set Right X = 0
+Right_Y = 0                             'Set Right Y = 0.
+Counter = 0
+' --------[ Main Program ]--------------------------------------------------------------------------------
+Main:
+   GOSUB DataRx                          'Receive Data
+   GOSUB Joystick                        'RC, Joysticks
+   IF Left_X < 30 OR Left_X > 20 OR  Left_Y < 40 OR Left_Y > 25 THEN GOSUB Neutral ' Hold: Neutral
+   IF Left_Y < 10 THEN GOSUB Backward      'Hold: Backward
+   IF Left_Y > 35 THEN GOSUB Forward       'Hold: Forward
+   IF Left_X < 15 THEN GOSUB Left          'Hold: Left
+   IF Left_X > 40 THEN GOSUB Right         'Hold: Right
+   IF PB0 = 1 THEN PB1 = PB1 + 1           'Pushbuttons
+   IF Right_Y > 40 THEN GOSUB Up           'Move: Arm Up
+   IF Right_Y < 20 THEN GOSUB Down         'Move: Arm Down
+   IF Right_X > 40 THEN GOSUB Open         'Claw: Open
+   IF Right_X < 20 THEN GOSUB Close        'Claw: Close
+   GOSUB DataTx                            'Do Not Run Code Below TX
+GOTO Main
+' --------[Subroutines ]----------------------------------------------------------------------------------
+DataRx:
+   LOW WiFi                              'LED RX=0
+   LOW TxEnable                          'Enable Receiver
+   SERIN Tx, 16572, [WAIT("DataTx"), DEC3 Distance, DEC1 distanceLeft, DEC1 distanceRight ]'Receives Data
+   HIGH WiFi                             'LED RX=1
+   PAUSE 10                              'Sync Pulse
+RETURN
+
+DataTx:
+   LOW WiFi                               'LED TX=0
+   HIGH TxEnable                          'Enable Transmitter
+   PULSOUT Tx,1200                        'Send Sync Pulse to Radio
+   SEROUT Tx, 16572, ["DataRx",DEC Pos, DEC PB1] 'Sends Data
+   HIGH WiFi                              'LED TX=1
+   PAUSE 10                               'Sync Pulse
+RETURN
+
+Joystick:
+  HIGH Joystick_UD0                      'Set PIN High
+  RCTIME Joystick_UD0, 1, Left_X         'Set RC Timeconstant into Left-X
+  PAUSE 2
+  HIGH Joystick_LR0                      'Set PIN High
+  RCTIME Joystick_LR0, 1, Left_Y         'Set RC Timeconstant into Left-Y
+  PAUSE 2
+  HIGH Joystick_UD1                      'Set PIN High
+  RCTIME Joystick_UD1, 1, Right_X        'Set RC Timeconstant into Right-X
+  PAUSE 2
+  HIGH Joystick_LR1                      'Set PIN High
+  RCTIME Joystick_LR1, 1, Right_Y        'Set RC Timeconstant into Right-Y
+  PAUSE 2
+RETURN
+
+Neutral:
+    SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls, LcdOn1,LcdLine1]      'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Neutral"]                             'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLon, LcdOn1,LcdLine2]              'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  Pos = 0                                                      'Position Value
+RETURN
+
+Forward:
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Forward"]                             'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1,LcdLine2]             'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  Pos = 1                                                      'Position Value
+RETURN
+
+Backward:
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Backward"]                            'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1,LcdLine2]             'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  IF distanceLeft < 2 THEN GOSUB Error                          'IR tripped
+  IF distanceRight < 2 THEN GOSUB Error                               'IR tripped
+  Pos = 2                                                      'Position Value
+RETURN
+
+Left:
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Left"]                                'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1,LcdLine2]             'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  Pos = 3                                                      'Position Value
+RETURN
+
+Right:
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Right"]                               'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1,LcdLine2]             'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  Pos = 4                                                      'Position Value
+RETURN
+
+Up:
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Neutral,Arm Up"]                      'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1,LcdLine2]             'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  Pos = 5                                                      'Position Value
+RETURN
+
+Down:
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Neutral,Arm Down"]                    'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1,LcdLine2]             'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  Pos = 6                                                      'Position Value
+RETURN
+
+Open:
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Neutral,A Open"]                      'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1,LcdLine2]             'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  Pos = 7                                                      'Position Value
+RETURN
+
+Close:
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Neutral,A Close"]                     'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1,LcdLine2]             'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Ping:",DEC3 Distance ]                'Sends text to LCD
+  Pos = 8                                                      'Position Value
+RETURN
+
+Error:
+   PAUSE 5
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls,LcdOn1,LcdLine1]        'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Neutral"]                             'Sends text to LCD
+  SEROUT lcd, LcdBaud, [LcdBLoff,LcdCls, LcdOn1,LcdLine2]       'Initializes LCD
+  SEROUT lcd, LcdBaud, ["IR Detected!"]                        'Sends text to LCD
+RETURN

@@ -1,0 +1,193 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'*********************************************************************************************************
+'* Program:  Control.BS2             Author:   Brian & Charlie                                           *
+'* Date:     3/10/2010               Revision: 2.0                                                       *
+'*********************************************************************************************************
+
+' --------[ Program Description ]-------------------------------------------------------------------------
+
+' --------[ I/O Definitions ]-----------------------------------------------------------------------------
+
+Joystick_UD0   PIN 1  ' Joystick, Up/Down, Left
+Joystick_LR0   PIN 2  ' Joystick, Left/Right, Left
+Joystick_UD1   PIN 3  ' Joystick, Up/Down, Right
+Joystick_LR1   PIN 4  ' Joystick, Left/Right, Right
+DataPin        PIN 5  ' Wireless Data
+TX_RX          PIN 6  ' Wireless, TX=1 RX=0
+LCD            PIN 7  ' 16x2 Serial LCD Pin.
+
+' --------[ Variables ]-----------------------------------------------------------------------------------
+
+Left_X    VAR  Byte    ' Stores RC Value, Left X Joystick
+Left_Y    VAR  Byte    ' Stores RC Value, Left Y Joystick
+Right_X   VAR  Byte    ' Stores RC Value, Right X Joystick
+Right_Y   VAR  Byte    ' Stores RC Value, Right Y Joystick
+TxValue   VAR  Word    ' Stores Count, Transmitting Data
+RxValue   VAR  Word    ' Stores Count, Receiving Data
+inches    VAR  Word    ' Converting to Inches
+Pos       VAR  Byte
+
+' --------[ Constants ]-----------------------------------------------------------------------------------
+
+#SELECT $STAMP
+  #CASE BS2, BS2E, BS2PE
+    T2400       CON     396
+    T9600       CON     84
+    T19K2       CON     32
+#ENDSELECT
+
+LcdBaud         CON     T19K2
+
+LcdBkSpc        CON     $08             ' move cursor left
+LcdRt           CON     $09             ' move cursor right
+LcdLF           CON     $0A             ' move cursor down 1 line
+LcdCls          CON     $0C             ' clear LCD (use PAUSE 5 after)
+LcdCR           CON     $0D             ' move pos 0 of next line
+LcdBLon         CON     $11             ' backlight on
+LcdBLoff        CON     $12             ' backlight off
+LcdOff          CON     $15             ' LCD off
+LcdOn1          CON     $16             ' LCD on; cursor off, blink off
+LcdOn2          CON     $17             ' LCD on; cursor off, blink on
+LcdOn3          CON     $18             ' LCD on; cursor on, blink off
+LcdOn4          CON     $19             ' LCD on; cursor on, blink on
+LcdLine1        CON     $80             ' move to line 1, column 0
+LcdLine2        CON     $94             ' move to line 2, column 0
+
+LcdCC0          CON     $F8             ' define custom char 0
+LcdCC1          CON     $F9             ' define custom char 1
+LcdCC2          CON     $FA             ' define custom char 2
+LcdCC3          CON     $FB             ' define custom char 3
+LcdCC4          CON     $FC             ' define custom char 4
+LcdCC5          CON     $FD             ' define custom char 5
+LcdCC6          CON     $FE             ' define custom char 6
+LcdCC7          CON     $FF             ' define custom char 7
+
+RC_Time         CON     1             ' 100mS Delay, RC Timeconstant
+PauseShort      CON     400             ' 400mS Delay, General Delay
+PauseLong       CON     800             ' 800mS Delay, General Delay
+
+' --------[ Initialization ]------------------------------------------------------------------------------
+
+DEBUG CLS, "Powering On, Please Wait..." ' Power's on Controller
+PAUSE 2000                               ' Wait, Before Sending Data
+DEBUG CLS
+
+' --------[Set Values ]-----------------------------------------------------------------------------------
+
+RxValue = 0                              ' Counter for Wireless RX
+TxValue = 0                              ' Counter for Wireless TX
+Left_X = 0                               ' Set Left X = 0
+Left_Y = 0                               ' Set Left Y = 0
+Right_X = 0                              ' Set Right X = 0
+Right_Y = 0                              ' Set Right Y = 0
+Inches = 0                               ' Sets Ping, Value
+
+' --------[ Joystick ]------------------------------------------------------------------------------------
+
+DO
+
+HIGH Joystick_UD0                        ' Set PIN High
+RCTIME Joystick_UD0, 1, Left_X           ' Set RC Timeconstant into Left-X
+PAUSE 2
+HIGH Joystick_LR0                        ' Set PIN High
+RCTIME Joystick_LR0, 1, Left_Y           ' Set RC Timeconstant into Left-Y
+PAUSE 2
+HIGH Joystick_UD1                        ' Set PIN High
+RCTIME Joystick_UD1, 1, Right_X          ' Set RC Timeconstant into Right-X
+PAUSE 2
+HIGH Joystick_LR1                        ' Set PIN High
+RCTIME Joystick_LR1, 1, Right_Y          ' Set RC Timeconstant into Right-Y
+PAUSE 2
+
+' --------[Display]---------------------------------------------------------------------------------------
+
+DEBUG  HOME, "Left-X  = ", DEC Left_X,CLREOL,CR, "Left-Y  = ", DEC Left_Y,CLREOL ,CR,
+             "Right-X = ", DEC Right_X,CLREOL,CR, "Right-Y = ", DEC Right_Y,CLREOL,CR,
+             "TX:", DEC TxValue, "  ","RX:", DEC RxValue,"  ","POS:", DEC Pos,"  ","Inches:",DEC inches
+
+
+' --------[Wireless RX ]---------------------------------------------------------------------------------
+
+LOW TX_RX                                   ' Wireless RX=0
+SERIN DataPin, 16468, [WAIT("!"), inches]   ' Receivces Data
+RxValue= RxValue + 1                        ' Increments Data Value
+PAUSE 10                                    ' Wireless TX=1
+HIGH TX_RX
+
+' --------[RC Conversion]---------------------------------------------------------------------------------
+SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]   'Initializes LCD
+SEROUT lcd, LcdBaud, ["Neutral"]
+Pos = 0
+
+IF Left_Y < 10 THEN GOSUB Forward
+IF Left_Y > 50 THEN GOSUB Backward
+
+IF Left_X < 15 THEN GOSUB Left
+IF Left_X > 40 THEN GOSUB Right
+
+
+HIGH TX_RX                                        'Wireless TX=1
+PULSOUT DataPin, 1200                             'Syncs a Pulse, Receiver
+SEROUT DataPin, 16468, [ "!",Pos]                 'Sends Data
+TxValue= TxValue + 1                              'Increments Data Value
+
+LOOP
+
+
+
+
+
+Forward:
+
+  IF Left_Y < 10 THEN
+  Pos = 1
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]    'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Forward"]                  'Sends text to LCD
+  HIGH TX_RX                                        'Wireless TX=1
+  PULSOUT DataPin, 1200                             'Syncs a Pulse, Receiver
+  SEROUT DataPin, 16468, [ "!",Pos]                 'Sends Data
+  TxValue= TxValue + 1                              'Increments Data Value
+  PAUSE 10
+  ENDIF
+
+  RETURN
+
+Backward:
+  IF Left_Y > 50 THEN
+  Pos = 2
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]    'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Backward"]                 'Sends text to LCD
+  HIGH TX_RX                                         'Wireless TX=1
+  PULSOUT DataPin, 1200                              'Syncs a Pulse, Receiver
+  SEROUT DataPin, 16468, [ "!",Pos]                  'Sends Data
+  TxValue= TxValue + 1                               'Increments Data Value
+  PAUSE 10
+  ENDIF
+  RETURN
+
+Left:
+  IF Left_X < 15 THEN
+  Pos = 3
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]   'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Left"]                     'Sends text to LCD
+  HIGH TX_RX                                        'Wireless TX=1
+  PULSOUT DataPin, 1200                             'Syncs a Pulse, Receiver
+  SEROUT DataPin, 16468, [ "!",Pos]                 'Sends Data
+  TxValue= TxValue + 1                              'Increments Data Value
+  PAUSE 10
+  ENDIF
+  RETURN
+
+Right:
+  IF Left_X > 40 THEN
+  Pos = 4
+  SEROUT lcd, LcdBaud, [LcdBLoff, LcdOn1, LcdCls]   'Initializes LCD
+  SEROUT lcd, LcdBaud, ["Right"]                    'Sends text to LCD
+  HIGH TX_RX                                        'Wireless TX=1
+  PULSOUT DataPin, 1200                             'Syncs a Pulse, Receiver
+  SEROUT DataPin, 16468, [ "!",Pos]                 'Sends Data
+  TxValue= TxValue + 1                              'Increments Data Value
+  PAUSE 10
+  ENDIF
+  RETURN

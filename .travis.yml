@@ -1,0 +1,161 @@
+# Set Distro
+sudo: enabled
+dist: trusty
+
+# Set to Bash
+language: bash
+
+# Test Only Master Branch
+branches:
+  only:
+  - master
+  - dev
+
+# Cache ClamAV
+cache:
+  directories:
+  - clamav
+
+# Install: Updates, ClamAV, Wine (Parallax) + AVR Toolchain, Configure X-Screen (Virtual Display)
+before_install:
+- sudo dpkg --add-architecture i386
+- sudo apt-get update
+- sudo apt-get install clamav -y
+
+# Copy from Cache (Virus Definitions)
+- if [ -d clamav/bytecode.cvd ]; then sudo cp clamav/bytecode.cvd /var/lib/clamav; fi
+- if [ -d clamav/daily.cvd ]; then sudo cp clamav/daily.cvd /var/lib/clamav; fi
+- if [ -d clamav/main.cvd ]; then sudo cp clamav/main.cvd /var/lib/clamav; fi
+
+- sudo apt-get install xvfb wine gcc-avr binutils-avr gdb-avr avr-libc -y
+- Xvfb :0 -screen 0 1024x768x16 &
+
+script: 
+
+# Store Main Branch Directory
+- basedir="/home/travis/build/codemonkeyrawks/Rover-BOT"
+
+# Bot & Joystick Controller
+# Test Each Bot & Controller Revision (Basic Stamp Software) to see if it builds correctly.
+
+# Revision 1
+- DISPLAY=:0.0 WINEDEBUG=err-all,warn-all,fixme-all,trace-all,relay-all wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_1/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_1/Control.BS2" >> "../Status.txt"
+
+# Revision 2
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_2/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_2/Control.BS2" >> "../Status.txt"
+
+# Revision 3
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_3/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_3/Control.BS2" >> "../Status.txt"
+
+# Revision 4
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_4/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_4/Control.BS2" >> "../Status.txt"
+
+# Revision 5
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_5/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_5/Control.BS2" >> "../Status.txt"
+
+# Revision 6
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_6/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_6/Control.BS2" >> "../Status.txt"
+
+# Revision 7
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_7/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_7/Control.BS2" >> "../Status.txt"
+
+# Revision 8
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_8/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_8/Control.BS2" >> "../Status.txt"
+
+# Revision 9
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_9/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_9/Control.BS2" >> "../Status.txt"
+
+# Revision 10
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_10/Robot/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_10/Robot/Control.BS2" >> "../Status.txt"
+
+# Revision 11
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_11/Robot/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_11/Robot/Control.BS2" >> "../Status.txt"
+
+# Revision 12
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_12/Robot/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_12/Robot/Control.BS2" >> "../Status.txt"
+
+# Revision 13
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_13/Robot/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_13/Robot/Control.BS2" >> "../Status.txt"
+
+# Revision 14
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_14/Robot/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_14/Robot/Control.BS2" >> "../Status.txt"
+
+# Arm (Gripper Controller)
+# Test Each Gripper Controller Revision (AVR-GCC) to see if it builds correctly.
+
+# Revision 10
+- avr-gcc -g -Os -mmcu=atmega8 -c "Program Code/Rev_10/Arm/main.c" -o "Program Code/Rev_10/Arm/main.o"
+- avr-gcc -g -mmcu=atmega8 -o "Program Code/Rev_10/Arm/main.elf" "Program Code/Rev_10/Arm/main.o"
+- avr-objcopy -j .text -j .data -O ihex "Program Code/Rev_10/Arm/main.elf" "Program Code/Rev_10/Arm/main.hex"
+
+# Revision 11
+- avr-gcc -g -Os -mmcu=atmega8 -c "Program Code/Rev_11/Arm/main.c" -o "Program Code/Rev_11/Arm/main.o" 
+- avr-gcc -g -mmcu=atmega8 -o "Program Code/Rev_11/Arm/main.elf" "Program Code/Rev_11/Arm/main.o"
+- avr-objcopy -j .text -j .data -O ihex "Program Code/Rev_11/Arm/main.elf" "Program Code/Rev_11/Arm/main.hex"
+
+# Revision 12
+- avr-gcc -g -Os -mmcu=atmega8 -c "Program Code/Rev_12/Arm/main.c" -o "Program Code/Rev_12/Arm/main.o" 
+- avr-gcc -g -mmcu=atmega8 -o "Program Code/Rev_12/Arm/main.elf" "Program Code/Rev_12/Arm/main.o"
+- avr-objcopy -j .text -j .data -O ihex "Program Code/Rev_12/Arm/main.elf" "Program Code/Rev_12/Arm/main.hex"
+
+# Revision 13
+- avr-gcc -g -Os -mmcu=atmega8 -c "Program Code/Rev_13/Arm/main.c" -o "Program Code/Rev_13/Arm/main.o" 
+- avr-gcc -g -mmcu=atmega8 -o "Program Code/Rev_13/Arm/main.elf" "Program Code/Rev_13/Arm/main.o"
+- avr-objcopy -j .text -j .data -O ihex "Program Code/Rev_13/Arm/main.elf" "Program Code/Rev_13/Arm/main.hex"
+
+# Revision 14
+- avr-gcc -g -Os -mmcu=atmega8 -c "Program Code/Rev_14/Arm/main.c" -o "Program Code/Rev_14/Arm/main.o" 
+- avr-gcc -g -mmcu=atmega8 -o "Program Code/Rev_14/Arm/main.elf" "Program Code/Rev_14/Arm/main.o"
+- avr-objcopy -j .text -j .data -O ihex "Program Code/Rev_14/Arm/main.elf" "Program Code/Rev_14/Arm/main.hex"
+
+# Check BS2 and AVR Code: (Return Pass or Fail)
+
+# Check if (BS2 has built successfully)
+- if [ $(grep -c 'Tokenized' ../Status.txt) == "28" ]; then Output0="Passed"; else Output0="Failed"; fi
+
+# Check if (AVR has built successfully)
+- if [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_10/Arm/main.hex" ] && [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_11/Arm/main.hex" ] && [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_12/Arm/main.hex" ] && [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_13/Arm/main.hex" ] && [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_14/Arm/main.hex" ]; then Output1="Passed"; else Output1="Failed"; fi
+
+# Virus Check (ClamAV)
+- sudo freshclam
+- sudo clamscan -r "$basedir" --exclude-dir=/sys/ --quiet --infected --log="/var/log/scan.log"
+- sudo mv "/var/log/scan.log" "$basedir/scan.log"
+- sudo chown travis "$basedir/scan.log"
+
+# Check if (Debian Shell Script) is Virus Clean
+- scanresult="$(grep 'Infected files' $basedir/scan.log | cut -c17- )"
+- if [ "$scanresult" == "0" ]; then Output2="Passed"; else Output2="Virus Detected!"; fi
+
+# Final Output: Pass or Fail
+- echo -e "\e[33m---------------------------------\e[39m" 
+          "\nBasic Stamp Code - $Output0"
+          "\nAVR Code         - $Output1" 
+          "\nVirus Check      - $Output2"
+        "\n\e[33m---------------------------------\e[39m"
+
+# Sets a Flag to Fail (On Broken Script)
+- if [ "$Output0" == "Failed" ]; then exit 1; fi
+- if [ "$Output1" == "Failed" ]; then exit 1; fi
+- if [ "$Output2" == "Virus Detected!" ]; then exit 1; fi
+
+# After Build Script
+after_script:
+
+# Post to Cache (Updated Definitions)
+- sudo cp /var/lib/clamav/bytecode.cvd clamav
+- sudo cp /var/lib/clamav/daily.cvd clamav
+- sudo cp /var/lib/clamav/main.cvd clamav

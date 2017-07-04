@@ -1,0 +1,230 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'*********************************************************************************************************
+'* Program:  Bot.BS2                 Author:   Brian & Charlie                                           *
+'* Date:     3/26/2010               Revision: 11.0                                                      *
+'*********************************************************************************************************
+
+' --------[ Program Description ]-------------------------------------------------------
+      'This program is for the Rover-Bot vehicle.
+' --------[ I/O Definitions ]-----------------------------------------------------------
+LfIrOut     PIN 0                   'Left IR LED, Output
+LfIrIn      PIN 1                   'Left IR Sensor, Input
+RtIrOut     PIN 2                   'Right IR LED, Output
+RtIrIn      PIN 3                   'Right IR Sensor, Input
+TxEnable    PIN 4                   'Transmitter(27982)TR PIN
+Tx          PIN 5                   'Transmitter(27982)DATA pin
+Ping        PIN 6                   'Ping sensor on pin 15
+ALeft       PIN 7                   'Activate Left
+CRight      PIN 8                   'Activate Right/ Activate Left
+ARight      PIN 9                   'Activate Right
+Lights      PIN 10                  'Lights, Front
+Speaker     PIN 11                  'Buzzer, Output
+Servo_AB    PIN 12                  'Left + Right Servos
+Servo_C     PIN 14                  'Servo to control Up/Down for robotic arm
+Servo_D     PIN 15                  'Servo to control left/right for robotic gripper
+' --------[ Constants ]-----------------------------------------------------------------
+Zone        CON     4000            'Buzzer Frequency
+T2400       CON     396             'Baud Rate 2400
+T9600       CON     84              'Baud Rate 9600
+T19K2       CON     32              'Baud Rate 12000
+Trigger     CON     5               'trigger pulse = 10 uS
+Scale       CON     $200            'raw x 2.00 = uS
+LcdBaud     CON     T19K2           'baud rate for LCD
+LcdBkSpc    CON     $08             'move cursor left
+LcdRt       CON     $09             'move cursor right
+LcdLF       CON     $0A             'move cursor down 1 line
+LcdCls      CON     $0C             'clear LCD (use PAUSE 5 after)
+LcdCR       CON     $0D             'move pos 0 of next line
+LcdOff      CON     $15             'LCD off
+LcdLine1    CON     $80             'move to line 1, column 0
+LcdLine2    CON     $94             'move to line 2, column 0
+inscale     CON     872             'scale factor for inches at 2000 feet
+ServoCountA = 670                   'Set Value to Servo C
+ServoCountB = 700                   'Set Value to Servo D
+' --------[ Variables ]-----------------------------------------------------------------
+PB1              VAR  Bit           'Enables Light Control
+irDetectLeft     VAR  Bit           'Temporary Storage for IR Left
+irDetectRight    VAR  Bit           'Temporary Storage for IR Right
+distanceLeft     VAR  Nib           'Value for Right IR Distance
+distanceRight    VAR  Nib           'Value for Left IR Distance
+freqSelect       VAR  Nib           'Value for Frequency
+Pos              VAR  Byte          'Position of Joystick Value
+irFrequency      VAR  Word          'Temporary Storage for Frequency
+DispNote         VAR  Word          'Count for FREQOUT
+Distance         VAR  Word          'Ping Distance Measurment
+ServoCountA      VAR  Word          'Servo Counter for Servo C
+ServoCountB      VAR  Word          'Servo Counter for Servo D
+' --------[ Initialization for Servos and Ping ]----------------------------------------
+FREQOUT Speaker, 500, Zone          'Send a Test Note on Powerup
+INPUT Servo_AB                      'Make Sure Servos are Not Moving.
+DO : LOOP UNTIL Servo_AB            'Wait for ServoPAL to Power Up.
+LOW Servo_AB                        'Set Pin, and Hold
+PAUSE 100                           '100mS Reset, ServoPAL.
+HIGH Servo_AB                       'Raise PIN
+PAUSE 200                           'Wait for PIN, Active.
+' --------[ Main Program ]--------------------------------------------------------------
+Main:
+DO
+   SEROUT Servo_C, 84, ["C"]'Sends Data
+   GOSUB IR
+   GOSUB DataTx
+   GOSUB DataRx
+   GOSUB PingOut
+   GOSUB Move
+   IF PB1 = 1 THEN GOSUB Light
+  IF PB1 = 0 THEN GOSUB NoLight
+LOOP
+' --------[Subroutines ]----------------------------------------------------------------
+IR:
+  distanceLeft = 0
+  distanceRight = 0
+  FOR freqSelect = 0 TO 4
+  LOOKUP freqSelect,[37500,38250,39500,40500,41500], irFrequency ' Table Lookup
+  FREQOUT LfIrOut,1,irFrequency                                  ' IR Left, Transmit
+  irDetectLeft = IN1                                             ' Store Distance
+  FREQOUT RtIrOut,1,irFrequency                                  ' IR Right, Transmit
+  irDetectRight = IN3                                            ' Store Distance
+  distanceLeft = distanceLeft + irDetectLeft                     ' Sum Values, Left
+  distanceRight = distanceRight + irDetectRight                  ' Sum Values, Right
+  NEXT
+  RETURN
+
+DataTx:
+   HIGH TxEnable                             'Enable Transmitter
+   PULSOUT Tx,1200                           'Send Sync Pulse to Radio
+   SEROUT Tx, 24660, ["DataTx",DEC3 Distance]'Sends Ping Data to controller
+   PAUSE 10
+   RETURN
+
+DataRx:
+   LOW TxEnable                          'Enable Receiver
+   SERIN Tx, 24660, [WAIT("DataRx"),DEC1 Pos,DEC PB1]'Receives Joystick and Pushbutton Data from controller
+   PAUSE 10
+   RETURN
+
+PingOut:
+  PULSOUT Ping, 5                       'Set PIN 15 for 10uS
+  PULSIN Ping, 5, Distance              'Wait for Pin to Low
+  Distance = Distance ** inscale        'Scale Inches Down
+  PAUSE 100
+   RETURN
+
+Move:
+  IF Pos = 0 THEN GOSUB Neutral         'Read Pos value, if 0 goto subroutine Neutral
+  IF Pos = 1 THEN GOSUB Forward         'Read Pos value, if 1 goto subroutine Forward
+  IF Pos = 2 THEN GOSUB Backward        'Read Pos value, if 2 goto subroutine Backward
+  IF Pos = 3 THEN GOSUB Right           'Read Pos value, if 3 goto subroutine Right
+  IF Pos = 4 THEN GOSUB Left            'Read Pos value, if 4 goto subroutine Left
+  IF Pos = 5 THEN GOSUB Up              'Read Pos value, if 5 goto subroutine Claw Up
+  IF Pos = 6 THEN GOSUB Down            'Read Pos value, if 6 goto subroutine Claw Down
+  IF Pos = 7 THEN GOSUB Open            'Read Pos value, if 7 goto subroutine Claw Open
+  IF Pos = 8 THEN GOSUB Close           'Read Pos value, if 8 goto subroutine Claw Close
+   RETURN
+
+Light:
+  HIGH Lights                           'Turn on front lights
+  RETURN
+
+NoLight:
+  LOW Lights                            'Turn off front lights
+  RETURN
+
+Neutral:
+    PULSOUT Servo_AB, 2000              'Turn Right Servo off
+    PULSOUT Servo_AB, 2000              'Turn Left Servo off
+   RETURN
+
+Forward:
+    PULSOUT Servo_AB, 1000              'Right Servo: Forward
+    PULSOUT Servo_AB, 500               'Left Servo: Forward
+  GOSUB DataTx                          'Keeping wireless communication active
+   GOSUB DataRx                         'Keeping wireless communication active
+   RETURN
+
+Backward:
+  'IF distanceRight = 0 THEN GOSUB Buzz????????????????????????
+  IF distanceRight = 1 THEN GOSUB Buzz
+  'IF distanceLeft = 0 THEN GOSUB Buzz???????????????????????????
+  IF distanceLeft = 1 THEN GOSUB Buzz
+  PULSOUT Servo_AB, 500                 'Right Servo: Reverse
+  PULSOUT Servo_AB, 1000                'Left Servo: Reverse
+  GOSUB DataTx                          'Keeping wireless communication active
+  GOSUB DataRx                          'Keeping wireless communication active
+  RETURN
+
+Right:
+  PULSOUT Servo_AB, 500                 'Right Servo: Reverse
+  PULSOUT Servo_AB, 500                 'Left Servo: Forward
+  LOW ALeft                             'Turn off Left Blinker
+  HIGH ARight                           'Turn on Right Blinker
+  LOW CRight                            'Ground for Right Blinker?????????????????????????????????????????????
+  PAUSE 10
+  LOW ALeft                             'Activate Left Blinker
+  LOW ARight                            'Activate Right Blinker
+  LOW CRight                            'Activate Right Blinker???????????????????????????????????????????????
+  PAUSE 10
+  GOSUB DataTx                          'Keeping wireless communication active
+  GOSUB DataRx                          'Keeping wireless communication active
+  RETURN
+
+Left:
+  PULSOUT Servo_AB, 1000                'Right Servo: Forward
+  PULSOUT Servo_AB, 1000                'Left Servo: Reverse
+  HIGH ALeft                            'Turn on Left Blinker
+  LOW ARight                            'Turn off Right Blinker
+  LOW CRight                            'Activate Right Blinker??????????????????????????????????????
+  PAUSE 10                              'Wait
+  LOW ALeft                             'Turn off Left Blinker
+  LOW ARight                            'Turn off Right Blinker
+  LOW CRight                            'Activate Right Blinker????????????????????????????????????????
+  PAUSE 10
+  GOSUB DataTx                          'Keeping wireless communication active
+  GOSUB DataRx                          'Keeping wireless communication active
+  RETURN
+
+
+
+Up:
+DO
+   SEROUT Servo_C, 84, ["0"]            'Sends Data
+   GOSUB DataTx                         'Keeping wireless communication active
+   GOSUB DataRx                         'Keeping wireless communication active
+LOOP WHILE POS = 5
+RETURN
+
+Down:
+DO
+   SEROUT Servo_C, 84, ["5"]            'Sends Data
+   GOSUB DataTx                         'Keeping wireless communication active
+   GOSUB DataRx                         'Keeping wireless communication active
+LOOP WHILE POS = 6
+RETURN
+
+Open:
+DO
+   IF POS = 7 THEN ServoCountB = ServoCountB + 10 'Steps servomotor incrementally
+   ServoCountB = ServoCountB MAX 830              'Limits servo motor to a maximum position of 830
+   PULSOUT Servo_D , ServoCountB                  'Moves servomotor
+   PAUSE 5
+   GOSUB DataTx                                   'Keeping wireless communication active
+   GOSUB DataRx                                   'Keeping wireless communication active
+LOOP WHILE POS = 7
+RETURN
+
+Close:
+DO
+   IF POS = 8 THEN ServoCountB = ServoCountB - 10 'Steps Servomotor incrmentally
+   ServoCountB = ServoCountB MIN 600              'Limits servomotor to a minimum position of 600
+   PULSOUT Servo_D , ServoCountB                  'Moves servomotor
+   PAUSE 5
+   GOSUB DataTx                                   'keeping wireless communication active
+   GOSUB DataRx                                   'keeping wireless communication active
+LOOP WHILE POS = 8
+ RETURN
+
+Buzz:
+  FREQOUT Speaker, 500, Zone                      'Send Alarm Signal
+  PULSOUT Servo_AB, 2000                          'Turn Right Servo Off.
+    PULSOUT Servo_AB, 2000                        'Turn Left Servo Off.
+  GOTO Main
