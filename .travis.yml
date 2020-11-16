@@ -1,11 +1,10 @@
 # Build for Rover-BOT
 
 # Setup Linux Distro
-sudo: enabled
 dist: focal
 
 # Lang: BASH
-language: bash
+language: shell
 
 script:
 - echo "Hello World"
