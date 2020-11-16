@@ -1,7 +1,7 @@
 # Build for Rover-BOT
 main:
     stage: build
-    image: focal
+    image: ubuntu:focal
     script:
         - echo "Hello World"
 
