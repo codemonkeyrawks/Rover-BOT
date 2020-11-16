@@ -1,9 +1,8 @@
 ## Rover-BOT - 
 
 <h4>
-Dev Branch: <a href="https://travis-ci.org/codemonkeyrawks/Rover-BOT/branches"><img src="https://travis-ci.org/codemonkeyrawks/Rover-BOT.svg?branch=dev" alt="" width="80px" align="top"></a>
--
-Master Branch: <a href="https://travis-ci.org/codemonkeyrawks/Rover-BOT/branches"><img src="https://travis-ci.org/codemonkeyrawks/Rover-BOT.svg?branch=master" alt="" width="80px" align="top"></a>
+Master Branch: 
+<a href="https://travis-ci.org/codemonkeyrawks/Rover-BOT/branches"><img src="https://travis-ci.org/codemonkeyrawks/Rover-BOT.svg?branch=master" alt="" width="80px" align="top"/>
 </h4>
 
 <table>
@@ -22,21 +21,22 @@ Master Branch: <a href="https://travis-ci.org/codemonkeyrawks/Rover-BOT/branches
 #### Folder Structure:
 
     Main Project:
-    /Parallax - Used for Testing Only (Basic Stamp Software)
-    /Program Code - Contains the Basic Stamp Code (Bot & Controller) & C Code - Arm
-    /Project Powerpoint - Contains a Slideshow and Manual of the Completed project
-    /Project Report - Contains the Manual, Schematic, Flowchart and Instruction Guide on operating the Rover
+    /Parallax             - Used for Testing Only (Basic Stamp Software)
+    /Program Code         - Contains the Basic Stamp Code (Bot & Controller) & C Code - Arm
+    /Project Powerpoint   - Contains a Slideshow and Manual
+    /Project Report       - Contains the Manual, Schematic, Flowchart and Instruction Guide
     .Project Requirements - Requirements in Our Project
-    readme.md - Getting Started Guide
+    licence.txt           - GPL Licence
+    readme.md             - Getting Started Guide
     
     Testing:
-    .travis.yml - Used for Testing Only (Checks if Code Passes or Not)
+    .travis.yml - Used for Testing Only
+    .gitlab-ci.yml - Used for Testing Only
 
 #### Building:
 ```shell
 Open Terminal and Run:
 # sudo apt-get install git
 # git clone https://github.com/codemonkeyrawks/Rover-BOT.git
-# cd Rover-BOT
-# Examine Project Over: See .travis.yml and Project Report for building.
+# cd Rover-BOT => Examine Project Over
 ```

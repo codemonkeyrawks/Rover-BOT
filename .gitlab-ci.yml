@@ -1,0 +1,9 @@
+# Build for Rover-BOT
+main:
+    stage: build
+    image: focal
+    script:
+        - echo "Hello World"
+
+# Allow Build Fails
+.allow_failure: true
