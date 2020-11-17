@@ -28,7 +28,7 @@ script:
 # Build Basic Stamp Software for Linux
 - mkdir $basedir/Parallax
 - wget https://www.parallax.com/sites/default/files/downloads/Setup-Stamp-Editor-v2.5.4.exe
-- wine Setup-Stamp-Editor-v2.5.4.exe /S /v/qn
+- wine Setup-Stamp-Editor-v2.5.4.exe /S /v/qn > /dev/null 2>&1
 
 # Bot & Joystick Controller
 # Test Each Bot & Controller Revision (Basic Stamp Software)
