@@ -1,12 +1,15 @@
 # Build for Rover-BOT
 
-# Setup Linux Distro
-os: linux
+language: shell
 arch: i386
 dist: focal
+os:
+    - linux
+    - windows
 
-# Lang: BASH
-language: shell
+jobs:
+    include:
+        - dist: bionic
 
 # Deploy Wine and XOrg
 before_install:
@@ -25,6 +28,7 @@ script:
 - mkdir $basedir/Parallax
 - wget https://www.parallax.com/sites/default/files/downloads/Setup-Stamp-Editor-v2.5.4.exe
 - mv Setup-Stamp-Editor-v2.5.4.exe $basedir/Parallax/StampEditor.exe
+- wine $basedir/Parallax/StampEditor.exe ?
 
 # Bot & Joystick Controller
 # Test Each Bot & Controller Revision (Basic Stamp Software)
