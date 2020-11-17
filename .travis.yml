@@ -1,10 +1,30 @@
 # Build for Rover-BOT
 
 # Setup Linux Distro
+os: linux
 dist: focal
 
 # Lang: BASH
 language: shell
 
+# Deploy Wine and XOrg
+before_install:
+- sudo dpkg --add-architecture i386
+- sudo apt-get update
+- sudo apt-get install xvfb wine gcc-avr binutils-avr gdb-avr avr-libc -y
+- Xvfb :0 -screen 0 1024x768x16 &
+
 script:
-- echo "Hello World"
+
+# Store Main Branch Directory
+- basedir="/home/travis/build/codemonkeyrawks/Rover-BOT"
+
+# Bot & Joystick Controller
+# Test Each Bot & Controller Revision (Basic Stamp Software)
+
+# Revision 1
+- DISPLAY=:0.0 WINEDEBUG=err-all,warn-all,fixme-all,trace-all,relay-all wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_1/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_1/Control.BS2" >> "../Status.txt"
+
+# Display File
+- cat ../Status.txt
