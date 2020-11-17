@@ -18,13 +18,14 @@ script:
 
 # Store Main Branch Directory
 - basedir="/home/travis/build/codemonkeyrawks/Rover-BOT"
+- winepfx="WINEDEBUG=err-all,warn-all,fixme-all,trace-all,relay-all wine64"
 
 # Bot & Joystick Controller
 # Test Each Bot & Controller Revision (Basic Stamp Software)
 
 # Revision 1
-- DISPLAY=:0.0 WINEDEBUG=err-all,warn-all,fixme-all,trace-all,relay-all wine64 "Parallax/StampEditor" /Tokenize "../Program Code/Rev_1/Bot.BS2" >> "../Status.txt"
-- DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_1/Control.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 $winepfx "Parallax/StampEditor" /Tokenize "../Program Code/Rev_1/Bot.BS2" >> "../Status.txt"
+- DISPLAY=:0.0 $winepfx "Parallax/StampEditor" /Tokenize "../Program Code/Rev_1/Control.BS2" >> "../Status.txt"
 
 # Revision 2
 - DISPLAY=:0.0 wine "Parallax/StampEditor" /Tokenize "../Program Code/Rev_2/Bot.BS2" >> "../Status.txt"
@@ -114,7 +115,7 @@ script:
 # =====================================
 # Check AVR Code: (Return Pass or Fail)
 # =====================================
-- if [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_10/Arm/main.hex" ] &&
+- if [ -f "$basedir/Program Code/Rev_10/Arm/main.hex" ] &&
      [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_11/Arm/main.hex" ] &&
      [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_12/Arm/main.hex" ] &&
      [ -f "/home/travis/build/codemonkeyrawks/Rover-BOT/Program Code/Rev_13/Arm/main.hex" ] &&
