@@ -21,6 +21,10 @@ script:
 - basedir="/home/travis/build/codemonkeyrawks/Rover-BOT"
 - winepfx="err-all,warn-all,fixme-all,trace-all,relay-all wine"
 
+# Build Basic Stamp Software for Linux
+- wget https://www.parallax.com/sites/default/files/downloads/Setup-Stamp-Editor-v2.5.4.exe
+- mv Setup-Stamp-Editor-v2.5.4.exe $basedir/Parallax/StampEditor.exe
+
 # Bot & Joystick Controller
 # Test Each Bot & Controller Revision (Basic Stamp Software)
 
