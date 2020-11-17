@@ -19,7 +19,7 @@ script:
 
 # Store Main Branch Directory
 - basedir="/home/travis/build/codemonkeyrawks/Rover-BOT"
-- winepfx="err-all,warn-all,fixme-all,trace-all,relay-all wine"
+- winepfx="err-all,warn-all,fixme-all,trace-all,relay-all"
 
 # Build Basic Stamp Software for Linux
 - mkdir $basedir/Parallax
