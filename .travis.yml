@@ -82,7 +82,7 @@ script:
 
 # =====================================
 # Check BS2 Code: (Return Pass or Fail)
-- cat ../Status.txt
+- if [ $(grep -c 'Tokenized' ../Status.txt) == "28" ]; then Output0="Passed"; else Output0="Failed"; fi
 # =====================================
 
 # Arm (Gripper Controller)
