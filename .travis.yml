@@ -2,7 +2,7 @@
 
 # Setup Linux Distro
 os: linux
-arch: x32
+arch: x86
 dist: focal
 
 # Lang: BASH
