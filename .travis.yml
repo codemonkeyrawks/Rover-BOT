@@ -19,7 +19,7 @@ script:
 
 # Store Main Branch Directory
 - basedir="/home/travis/build/codemonkeyrawks/Rover-BOT"
-- winepfx="WINEDEBUG=err-all,warn-all,fixme-all,trace-all,relay-all wine64"
+- winepfx="WINEDEBUG=err-all,warn-all,fixme-all,trace-all,relay-all wine"
 
 # Bot & Joystick Controller
 # Test Each Bot & Controller Revision (Basic Stamp Software)
